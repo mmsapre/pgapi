@@ -1,0 +1,23 @@
+{
+    "select": [
+        "users.name",
+        "users.email",
+        "orders.amount"
+    ],
+    "from": "users",
+    "join": [
+        {
+            "table": "orders",
+            "on": {
+                "users.id": "orders.user_id"
+            }
+        }
+    ],
+    "where": {
+        "orders.amount": {
+            "gt": 100
+        }
+    },
+    "limit": 100,
+    "offset": 0
+}

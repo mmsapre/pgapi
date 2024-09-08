@@ -1,0 +1,69 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "select": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "from": {
+            "type": "string"
+        },
+        "join": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "table": {
+                        "type": "string"
+                    },
+                    "on": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "table",
+                    "on"
+                ]
+            }
+        },
+        "where": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "eq": {
+                        "type": "string"
+                    },
+                    "gt": {
+                        "type": "number"
+                    },
+                    "lt": {
+                        "type": "number"
+                    },
+                    "like": {
+                        "type": "string"
+                    },
+                    "contains": {
+                        "type": "object"
+                    }
+                }
+            }
+        },
+        "limit": {
+            "type": "integer"
+        },
+        "offset": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "select",
+        "from"
+    ]
+}

@@ -1,0 +1,16 @@
+
+dsl:
+  allowed:
+    tables:
+      - name: "users"
+        columns:
+          - "id"
+          - "name"
+          - "email"
+          - "age"
+      - name: "orders"
+        columns:
+          - "order_id"
+          - "user_id"
+          - "amount"
+          - "status"

@@ -1,0 +1,68 @@
+{
+    "info": {
+        "name": "PostgreSQL DSL Queries",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Join Query Without JSONB",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "\n{\n  \"select\": [\"users.name\", \"users.email\", \"orders.amount\"],\n  \"from\": \"users\",\n  \"join\": [\n    {\n      \"table\": \"orders\",\n      \"on\": {\"users.id\": \"orders.user_id\"}\n    }\n  ],\n  \"where\": {\n    \"orders.amount\": { \"gt\": 100 }\n  },\n  \"limit\": 100,\n  \"offset\": 0\n}\n"
+                },
+                "url": {
+                    "raw": "http://localhost:8080/api/v1/dsl/query",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "v1",
+                        "dsl",
+                        "query"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Query With JSONB",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "\n{\n  \"select\": [\"user_data->>'name'\", \"email\"],\n  \"from\": \"users\",\n  \"where\": {\n    \"user_data\": {\n      \"contains\": {\n        \"age\": 30\n      }\n    }\n  },\n  \"limit\": 100,\n  \"offset\": 0\n}\n"
+                },
+                "url": {
+                    "raw": "http://localhost:8080/api/v1/dsl/query",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "v1",
+                        "dsl",
+                        "query"
+                    ]
+                }
+            }
+        }
+    ]
+}

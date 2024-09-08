@@ -1,0 +1,17 @@
+
+spring:
+  application:
+    name: api-client
+
+  cloud:
+    discovery:
+      enabled: true
+
+  retry:
+    maxAttempts: 3      # Maximum number of retry attempts
+    backoffDelay: 2000  # Delay between retries (in milliseconds)
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

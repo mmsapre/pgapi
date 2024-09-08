@@ -1,0 +1,12 @@
+{
+    "1": {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "amount": 150
+    },
+    "2": {
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "amount": 200
+    }
+}
