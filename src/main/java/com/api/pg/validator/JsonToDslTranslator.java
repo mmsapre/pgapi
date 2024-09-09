@@ -17,7 +17,7 @@ public class JsonToDslTranslator {
 
     /**
      * Translates the Elasticsearch-style JSON query request to a DSL query string.
-     * Handles JOINs, JSONB validation, and single table queries.
+     * Handles JOINs, JSONB validation, and single table queries with alias support.
      * @param queryRequest The incoming Elasticsearch-style query request.
      * @return The corresponding DSL query string.
      * @throws IllegalArgumentException If the query is invalid.
@@ -47,12 +47,12 @@ public class JsonToDslTranslator {
 
         // Add LIMIT and OFFSET for pagination
         if (queryRequest.containsKey("size")) {
-            int limit = (int) queryRequest.get("size");
+            int limit = parseLimit(queryRequest.get("size"));
             queryString.append(" LIMIT ").append(limit);
         }
 
         if (queryRequest.containsKey("from")) {
-            int offset = (int) queryRequest.get("from");
+            int offset = parseOffset(queryRequest.get("from"));
             queryString.append(" OFFSET ").append(offset);
         }
 
@@ -60,7 +60,7 @@ public class JsonToDslTranslator {
         return queryString.toString();
     }
 
-    // Handle the FROM clause for single and JOIN queries
+    // Handle the FROM clause for single and JOIN queries with alias support
     private String handleFromClause(Map<String, Object> queryRequest) {
         if (queryRequest.containsKey("joins")) {
             // Handling JOIN queries
@@ -139,6 +139,28 @@ public class JsonToDslTranslator {
             case "gt": return ">";
             case "lt": return "<";
             default: throw new IllegalArgumentException("Invalid range operator: " + esOperator);
+        }
+    }
+
+    // Parse limit value and handle type casting issues
+    private int parseLimit(Object limitObj) {
+        if (limitObj instanceof Integer) {
+            return (Integer) limitObj;
+        } else if (limitObj instanceof String) {
+            return Integer.parseInt((String) limitObj); // Handle string values
+        } else {
+            throw new IllegalArgumentException("Invalid type for limit: " + limitObj);
+        }
+    }
+
+    // Parse offset value and handle type casting issues
+    private int parseOffset(Object offsetObj) {
+        if (offsetObj instanceof Integer) {
+            return (Integer) offsetObj;
+        } else if (offsetObj instanceof String) {
+            return Integer.parseInt((String) offsetObj); // Handle string values
+        } else {
+            throw new IllegalArgumentException("Invalid type for offset: " + offsetObj);
         }
     }
 }
