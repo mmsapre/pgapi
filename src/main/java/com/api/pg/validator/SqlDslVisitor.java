@@ -11,11 +11,16 @@ import java.util.stream.Collectors;
 public class SqlDslVisitor extends PgRestBaseVisitor<String> {
 
     private List<Object> parameters = new ArrayList<>();
+    private boolean isCountQuery = false;  // Flag to control count query behavior
+
+    public SqlDslVisitor(boolean isCountQuery) {
+        this.isCountQuery = isCountQuery;
+    }
     @Override
     public String visitQuery(PgRestParser.QueryContext ctx) {
         StringBuilder query = new StringBuilder();
 
-        // Process SELECT clause
+        // Process SELECT clause (handle COUNT query if the flag is set)
         query.append(visit(ctx.selectClause())).append(" ");
 
         // Process FROM clause
@@ -31,19 +36,19 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
             query.append(visit(ctx.whereClause())).append(" ");
         }
 
-        // Process ORDER BY clause (if present)
-        if (ctx.orderClause() != null) {
+        // Process ORDER BY clause (if present and not a count query)
+        if (!isCountQuery && ctx.orderClause() != null) {
             query.append(visit(ctx.orderClause())).append(" ");
         }
 
-        // Process LIMIT clause (if present)
-        if (ctx.limitClause() != null) {
-            query.append(visit(ctx.limitClause())).append(" ");
-        }
-
-        // Process OFFSET clause (if present)
-        if (ctx.offsetClause() != null) {
-            query.append(visit(ctx.offsetClause())).append(" ");
+        // Process LIMIT and OFFSET clauses (not needed in count queries)
+        if (!isCountQuery) {
+            if (ctx.limitClause() != null) {
+                query.append(visit(ctx.limitClause())).append(" ");
+            }
+            if (ctx.offsetClause() != null) {
+                query.append(visit(ctx.offsetClause())).append(" ");
+            }
         }
 
         // Add semicolon at the end of the query if present
@@ -54,10 +59,14 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
         return query.toString().trim();
     }
 
-    // Visit the SELECT clause
+    // Visit the SELECT clause with support for COUNT query
     @Override
     public String visitSelectClause(PgRestParser.SelectClauseContext ctx) {
-        return "SELECT " + visit(ctx.selectList());
+        if (isCountQuery) {
+            return "SELECT COUNT(*)";
+        } else {
+            return "SELECT " + visit(ctx.selectList());
+        }
     }
 
     // Visit the FROM clause considering table name with alias and optional schema
@@ -71,7 +80,6 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
     public String visitTableName(PgRestParser.TableNameContext ctx) {
         StringBuilder tableName = new StringBuilder();
 
-        // Optional schema name
         if (ctx.ID().size() == 3) {
             tableName.append(ctx.ID(0).getText()).append("."); // Schema name
             tableName.append(ctx.ID(1).getText()); // Table name
@@ -86,10 +94,24 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
         return tableName.toString();
     }
 
-    // Visit the JOIN clause, including condition
+    // Visit the JOIN clause, ensuring the correct join type is included
     @Override
     public String visitJoinClause(PgRestParser.JoinClauseContext ctx) {
-        return "JOIN " + visit(ctx.tableName()) + " ON " + visit(ctx.condition());
+        String joinType = visit(ctx.joinType());    // JOIN or INNER JOIN
+        String tableName = visit(ctx.tableName());  // Table to join
+        String condition = visit(ctx.condition());  // ON condition
+
+        return joinType + " " + tableName + " ON " + condition;
+    }
+
+    // Visit join types (JOIN or INNER JOIN)
+    @Override
+    public String visitJoinType(PgRestParser.JoinTypeContext ctx) {
+        // Check if the join type is "INNER JOIN" and handle it properly
+        if (ctx.getText().equals("INNERJOIN")) {
+            return "INNER JOIN";  // Add space between "INNER" and "JOIN"
+        }
+        return ctx.getText();  // Return the exact join type (JOIN, INNER JOIN, etc.)
     }
 
     // Visit the WHERE clause
@@ -105,16 +127,16 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
         return whereClause.toString();
     }
 
-    // Visit the LIMIT clause
+    // Visit the LIMIT clause (skip if it's a count query)
     @Override
     public String visitLimitClause(PgRestParser.LimitClauseContext ctx) {
-        return "LIMIT " + ctx.NUMBER().getText();
+        return !isCountQuery ? "LIMIT " + ctx.NUMBER().getText() : "";
     }
 
-    // Visit the OFFSET clause
+    // Visit the OFFSET clause (skip if it's a count query)
     @Override
     public String visitOffsetClause(PgRestParser.OffsetClauseContext ctx) {
-        return "OFFSET " + ctx.NUMBER().getText();
+        return !isCountQuery ? "OFFSET " + ctx.NUMBER().getText() : "";
     }
 
     // Visit a column (regular or JSONB column) with optional alias
@@ -127,7 +149,8 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
             columnStr = visit(ctx.jsonbColumn());
         }
 
-        if (ctx.ID() != null) {
+        // Apply alias only in SELECT statements
+        if (ctx.ID() != null && ctx.getParent() instanceof PgRestParser.SelectListContext) {
             columnStr += " AS " + ctx.ID().getText();  // Handle alias
         }
 
@@ -137,7 +160,6 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
     // Visit a regular column (table.column or just column)
     @Override
     public String visitRegularColumn(PgRestParser.RegularColumnContext ctx) {
-        // Ensure we capture table alias and column name
         if (ctx.ID().size() == 2) {
             return ctx.ID(0).getText() + "." + ctx.ID(1).getText();  // e.g., t1.age
         } else {
@@ -145,6 +167,11 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
         }
     }
 
+    // Visit a condition (for JOIN or WHERE clauses), handles both sides of the condition
+    @Override
+    public String visitCondition(PgRestParser.ConditionContext ctx) {
+        return visit(ctx.column(0)) + " " + ctx.OPERATOR().getText() + " " + visit(ctx.column(1));
+    }
     public List<Object> getParameters() {
         return parameters;
     }

@@ -1,18 +1,20 @@
 grammar PgRest;
 
-// Main query structure, includes SELECT, FROM, JOIN, WHERE, LIMIT, OFFSET, etc.
+// Main query structure
 query: selectClause fromClause (joinClause)* whereClause? orderClause? limitClause? offsetClause? SEMICOLON? EOF;
 
-// SELECT clause, handles selecting columns (with aliases)
+// SELECT clause
 selectClause: SELECT selectList;
 
-// FROM clause, specifies the base table and optional alias
+// FROM clause
 fromClause: FROM tableName;
 
-// JOIN clause with a condition (can have multiple JOINs)
-joinClause: JOIN tableName ON condition;
+// JOIN clauses, with support for both regular JOIN and INNER JOIN
+joinClause: joinType tableName ON condition;
 
-// WHERE clause, allows multiple conditions joined by AND
+joinType: JOIN | INNER JOIN;
+
+// WHERE clause
 whereClause: WHERE condition (AND condition)*;
 
 // ORDER BY clause (optional)
@@ -24,16 +26,16 @@ limitClause: LIMIT NUMBER;
 // OFFSET clause (optional)
 offsetClause: OFFSET NUMBER;
 
-// List of columns in the SELECT clause, columns can have aliases
+// List of columns in the SELECT clause
 selectList: column (',' column)*;
 
-// A column can either be a regular column, a JSONB column, or a column with an alias
+// A column can either be a regular column or a JSONB column
 column: (jsonbColumn | regularColumn) (AS? ID)?;
 
 // Regular column (e.g., table.column or just column)
 regularColumn: ID ('.' ID)?;
 
-// JSONB column with access operators (->, ->>, @>, #>>), allowing nested access
+// JSONB column
 jsonbColumn: regularColumn jsonbAccess;
 
 // JSONB access (e.g., -> 'key' or ->> 'key')
@@ -42,7 +44,7 @@ jsonbAccess: ('->' | '->>' | '@>' | '#>>') STRING (jsonbAccess)?;
 // Table name with optional schema and alias
 tableName: (ID '.')? ID (ID)?;  // Optional schema name and table alias
 
-// Condition for WHERE and JOIN clauses, allowing the right-hand side to be a value or a column
+// Condition for WHERE and JOIN clauses
 condition: column OPERATOR (column | value);
 
 // Possible values in conditions (including JSONB values and literals)
@@ -58,6 +60,7 @@ pair: STRING ':' value;
 SELECT: 'SELECT';
 FROM: 'FROM';
 JOIN: 'JOIN';
+INNER: 'INNER';
 ON: 'ON';
 WHERE: 'WHERE';
 ORDER: 'ORDER';
@@ -83,7 +86,7 @@ NUMBER: [0-9]+;
 // Boolean literals
 BOOLEAN: 'TRUE' | 'FALSE';
 
-// Handle semicolon at the end of a query
+// Semicolon for query end
 SEMICOLON: ';';
 
 // Skip whitespace
