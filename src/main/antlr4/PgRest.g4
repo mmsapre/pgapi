@@ -15,7 +15,6 @@ joinClause: JOIN tableName ON condition;
 // WHERE clause, allows multiple conditions joined by AND
 whereClause: WHERE condition (AND condition)*;
 
-// ORDER BY clause
 // ORDER BY clause (optional)
 orderClause: ORDER BY column (ASC | DESC)?;
 
@@ -40,8 +39,8 @@ jsonbColumn: regularColumn jsonbAccess;
 // JSONB access (e.g., -> 'key' or ->> 'key')
 jsonbAccess: ('->' | '->>' | '@>' | '#>>') STRING (jsonbAccess)?;
 
-// Table name with optional alias
-tableName: ID (ID)?;  // The second ID represents the table alias
+// Table name with optional schema and alias
+tableName: (ID '.')? ID (ID)?;  // Optional schema name and table alias
 
 // Condition for WHERE and JOIN clauses, allowing the right-hand side to be a value or a column
 condition: column OPERATOR (column | value);

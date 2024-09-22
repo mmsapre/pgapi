@@ -60,23 +60,27 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
         return "SELECT " + visit(ctx.selectList());
     }
 
-    // Visit the FROM clause considering table name with alias
+    // Visit the FROM clause considering table name with alias and optional schema
     @Override
     public String visitFromClause(PgRestParser.FromClauseContext ctx) {
         return "FROM " + visit(ctx.tableName());
     }
 
-    // Visit the table name, including alias if present
+    // Visit the table name, including optional schema and alias if present
     @Override
     public String visitTableName(PgRestParser.TableNameContext ctx) {
         StringBuilder tableName = new StringBuilder();
 
-        // The table name is the first ID
-        tableName.append(ctx.ID(0).getText());
-
-        // If an alias is present, it is the second ID
-        if (ctx.ID().size() > 1) {
-            tableName.append(" ").append(ctx.ID(1).getText());  // Add alias after table name
+        // Optional schema name
+        if (ctx.ID().size() == 3) {
+            tableName.append(ctx.ID(0).getText()).append("."); // Schema name
+            tableName.append(ctx.ID(1).getText()); // Table name
+            tableName.append(" ").append(ctx.ID(2).getText()); // Table alias
+        } else if (ctx.ID().size() == 2) {
+            tableName.append(ctx.ID(0).getText()); // Table name
+            tableName.append(" ").append(ctx.ID(1).getText()); // Table alias
+        } else {
+            tableName.append(ctx.ID(0).getText()); // Table name only
         }
 
         return tableName.toString();
@@ -139,50 +143,6 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
         } else {
             return ctx.ID(0).getText();
         }
-    }
-
-    // Visit a condition (e.g., column = value), which can now be a column or literal value
-    @Override
-    public String visitCondition(PgRestParser.ConditionContext ctx) {
-        // Visit the left-hand column and right-hand value/column in the condition
-        return visit(ctx.column(0)) + " " + ctx.OPERATOR().getText() + " " + visit(ctx.getChild(2));
-    }
-
-    // Visit value (could be STRING, NUMBER, BOOLEAN, ID, or JSONB)
-    @Override
-    public String visitValue(PgRestParser.ValueContext ctx) {
-        if (ctx.STRING() != null) {
-            return ctx.STRING().getText();
-        } else if (ctx.NUMBER() != null) {
-            return ctx.NUMBER().getText();
-        } else if (ctx.BOOLEAN() != null) {
-            return ctx.BOOLEAN().getText();
-        } else if (ctx.ID() != null) {
-            return ctx.ID().getText();  // Handle table identifiers like 't2'
-        } else if (ctx.jsonbValue() != null) {
-            return visit(ctx.jsonbValue());
-        }
-        return "";
-    }
-
-    // Visit a JSONB value (key-value pairs)
-    @Override
-    public String visitJsonbValue(PgRestParser.JsonbValueContext ctx) {
-        StringBuilder jsonbValue = new StringBuilder("{");
-        for (int i = 0; i < ctx.pair().size(); i++) {
-            jsonbValue.append(visit(ctx.pair(i)));
-            if (i < ctx.pair().size() - 1) {
-                jsonbValue.append(", ");
-            }
-        }
-        jsonbValue.append("}");
-        return jsonbValue.toString();
-    }
-
-    // Visit key-value pairs in JSONB
-    @Override
-    public String visitPair(PgRestParser.PairContext ctx) {
-        return ctx.STRING().getText() + ": " + visit(ctx.value());
     }
 
     public List<Object> getParameters() {
