@@ -1,58 +1,91 @@
 grammar PgRest;
 
-query : select_clause from_clause join_clause* where_clause? order_by_clause? limit_clause? offset_clause? EOF ;
+// Main query structure, includes SELECT, FROM, JOIN, WHERE, LIMIT, OFFSET, etc.
+query: selectClause fromClause (joinClause)* whereClause? orderClause? limitClause? offsetClause? SEMICOLON? EOF;
 
-select_clause : SELECT (DISTINCT)? select_elements ;
-select_elements : select_element (',' select_element)* ;
-select_element : STAR | jsonb_field | column_name ;
+// SELECT clause, handles selecting columns (with aliases)
+selectClause: SELECT selectList;
 
-from_clause : FROM table_reference ;
+// FROM clause, specifies the base table and optional alias
+fromClause: FROM tableName;
 
-join_clause : join_type JOIN table_reference ON condition ;
+// JOIN clause with a condition (can have multiple JOINs)
+joinClause: JOIN tableName ON condition;
 
-join_type : INNER | LEFT | RIGHT ;
+// WHERE clause, allows multiple conditions joined by AND
+whereClause: WHERE condition (AND condition)*;
 
-where_clause : WHERE condition ;
+// ORDER BY clause
+// ORDER BY clause (optional)
+orderClause: ORDER BY column (ASC | DESC)?;
 
-order_by_clause : ORDER BY column_name (ASC | DESC)? ;
+// LIMIT clause (optional)
+limitClause: LIMIT NUMBER;
 
-limit_clause : LIMIT INTEGER ;
+// OFFSET clause (optional)
+offsetClause: OFFSET NUMBER;
 
-offset_clause : OFFSET INTEGER ;
+// List of columns in the SELECT clause, columns can have aliases
+selectList: column (',' column)*;
 
-condition : expression (AND expression | OR expression)* ;
-expression : column_name comparison_operator value ;
+// A column can either be a regular column, a JSONB column, or a column with an alias
+column: (jsonbColumn | regularColumn) (AS? ID)?;
 
-jsonb_field : column_name '->>' STRING ;
+// Regular column (e.g., table.column or just column)
+regularColumn: ID ('.' ID)?;
 
-column_name : IDENTIFIER ('.' IDENTIFIER)? ;
+// JSONB column with access operators (->, ->>, @>, #>>), allowing nested access
+jsonbColumn: regularColumn jsonbAccess;
 
-table_reference : IDENTIFIER (AS? IDENTIFIER)? ;
+// JSONB access (e.g., -> 'key' or ->> 'key')
+jsonbAccess: ('->' | '->>' | '@>' | '#>>') STRING (jsonbAccess)?;
 
-value : STRING | INTEGER ;
+// Table name with optional alias
+tableName: ID (ID)?;  // The second ID represents the table alias
 
-comparison_operator : '=' | '<>' | '>' | '<' | '>=' | '<=' | 'LIKE' ;
+// Condition for WHERE and JOIN clauses, allowing the right-hand side to be a value or a column
+condition: column OPERATOR (column | value);
 
-IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]* ;
-STRING : '\'' .*? '\'' ;
-INTEGER : [0-9]+ ;
+// Possible values in conditions (including JSONB values and literals)
+value: STRING | NUMBER | BOOLEAN | ID | jsonbValue;
 
-WS : [ \t\r\n]+ -> skip ;
+// JSONB value as key-value pairs
+jsonbValue: '{' pair (',' pair)* '}';
 
-// Define lexer rules for the string literals
-SELECT : 'SELECT' ;
-FROM   : 'FROM' ;
-JOIN   : 'JOIN' ;
-ON     : 'ON' ;
-WHERE  : 'WHERE' ;
-ORDER  : 'ORDER' ;
-BY     : 'BY' ;
-LIMIT  : 'LIMIT' ;
-OFFSET : 'OFFSET' ;
-INNER  : 'INNER' ;
-LEFT   : 'LEFT' ;
-RIGHT  : 'RIGHT' ;
-ASC    : 'ASC' ;
-DESC   : 'DESC' ;
-DISTINCT : 'DISTINCT' ;
-STAR   : '*' ;
+// Key-value pairs for JSONB objects
+pair: STRING ':' value;
+
+// SQL keywords
+SELECT: 'SELECT';
+FROM: 'FROM';
+JOIN: 'JOIN';
+ON: 'ON';
+WHERE: 'WHERE';
+ORDER: 'ORDER';
+BY: 'BY';
+LIMIT: 'LIMIT';
+OFFSET: 'OFFSET';
+ASC: 'ASC';
+DESC: 'DESC';
+AS: 'AS';
+
+// Operators for conditions and JSONB access
+OPERATOR: '=' | '>' | '<' | '>=' | '<=' | '<>' | '@>' | 'LIKE';
+
+// Identifiers for table names, column names, and aliases
+ID: [a-zA-Z_][a-zA-Z_0-9_]*;
+
+// String literals
+STRING: '\'' ( ~['\\] | '\\' . )* '\'';
+
+// Number literals
+NUMBER: [0-9]+;
+
+// Boolean literals
+BOOLEAN: 'TRUE' | 'FALSE';
+
+// Handle semicolon at the end of a query
+SEMICOLON: ';';
+
+// Skip whitespace
+WS: [ \t\r\n]+ -> skip;
