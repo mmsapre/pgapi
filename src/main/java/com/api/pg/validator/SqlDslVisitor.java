@@ -172,6 +172,19 @@ public class SqlDslVisitor extends PgRestBaseVisitor<String> {
     public String visitCondition(PgRestParser.ConditionContext ctx) {
         return visit(ctx.column(0)) + " " + ctx.OPERATOR().getText() + " " + visit(ctx.column(1));
     }
+
+    @Override
+    public String visitSelectList(PgRestParser.SelectListContext ctx) {
+        // Collect all columns into a comma-separated list
+        StringBuilder selectList = new StringBuilder();
+        for (int i = 0; i < ctx.column().size(); i++) {
+            selectList.append(visit(ctx.column(i)));
+            if (i < ctx.column().size() - 1) {
+                selectList.append(", "); // Append a comma between columns
+            }
+        }
+        return selectList.toString();
+    }
     public List<Object> getParameters() {
         return parameters;
     }
