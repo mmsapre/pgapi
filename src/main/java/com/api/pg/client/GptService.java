@@ -1,5 +1,3 @@
-package com.api.pg.client;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -10,8 +8,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 @Service
 public class GptService {
@@ -41,16 +40,13 @@ public class GptService {
         }
 
         // Construct the full prompt with the query text and trusted source
-        String prompt = String.format("""
-            Using the trusted account data below, identify custom entities (ACCOUNT_NUMBER, BIC, HOLDER_NAME, BALANCE, CURRENCY) in the following text:
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Using the trusted account data below, identify custom entities (ACCOUNT_NUMBER, BIC, HOLDER_NAME, BALANCE, CURRENCY) in the following text:\n\n");
+        prompt.append("Trusted Account Data:\n");
+        prompt.append(trustedContext.toString()).append("\n");
+        prompt.append("Text: ").append(queryText).append("\n");
 
-            Trusted Account Data:
-            %s
-
-            Text: %s
-            """, trustedContext.toString(), queryText);
-
-        return prompt;
+        return prompt.toString();
     }
 
     // Function to send the constructed prompt to OpenAI's GPT API and get the response
